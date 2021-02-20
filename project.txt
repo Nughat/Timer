@@ -1,0 +1,170 @@
+#Nuzhat Khan
+.data
+a: .word 0
+b: .word 99
+
+.text
+main:
+lb $t0, a #t0 <- a
+lb $t1, b #t1 <- b
+li $t2, 99 #t2 <- 99
+
+#check
+slt $t3, $t0, $zero #t3 <- 1 or 0, checks if a is less than 0
+bne $t3, $zero, OUT #t3 <- 1, exit
+
+slt $t3, $t1, $t0 #t3 <- 1 or 0, checks if b is less than a
+bne $t3, $zero, OUT #t3 <- 1, exit
+
+slt $t3, $t2, $t0 #t3 <- 1 or 0, checks if 99 is less than a
+bne $t3, $zero, OUT #t3 <- 1, exit
+
+slt $t3, $t2, $t1 #t3 <- 1 or 0, checks if 99 is less than b
+bne $t3, $zero, OUT #t3 <- 1, exit
+
+li $t2, 10 #t2 <- 10, a
+add $s0, $t0, $zero #s0 <- t0, a
+div $s0, $t2 #s0 <- s0/10, a/10
+mflo $t8 #quotient, tens place of a
+mfhi $t9 #remainder, ones place of a
+li $t3, 9 #t3 <- 9
+
+Loop: slt $t2, $t1, $t0 #t3 <- 1 or 0, checks if b is less than a
+bne $t2, $zero, OUT #t3 <- 1, when a exceeds b's value exit
+
+li $s4, 300000 #s4 <- 300000, counter
+Delay: beq $s4, $zero, Continue #keep looping if 0 isn't reached, if it is then continue
+addi $s4, $s4, -1 #s4 <- s4 - 1, decrement the counter
+j Delay #loop
+
+Continue:
+slt $t4, $t3, $t9 #t4 <- 1 or 0, checks if the ones place has exceeded 9
+beq $t4, $zero, tensremain #t4 <- 0, ones place is less than or equal to 9 so it should not be reset to 0
+
+tens:
+addi $t8, $t8, 1 #t8 <- t8 + 1, increment the tens place if the ones place has exceeded 9
+li $t9, 0 #t9 <- 0, reset the ones place to 0
+
+tensremain:
+#push a0, a1, t0, and t9 to preserve their values just in case
+addi $sp, $sp, -16 #make space for 2 items on the stack
+sw $a0, 12($sp) #push a0 
+sw $a1, 8($sp) #push a1 
+sw $t0, 4($sp) #push t0 
+sw $t9, 0($sp) #push t9 
+
+#LEFT, ones place
+add $a0, $t9, $zero #a0 <- t9, the digit
+li $a1, 1 #a1 <- 1, the side
+jal Display #call display
+
+#pop t9 and push t8 where it was
+lw $t9, 0($sp) #pop t9
+sw $t8, 0($sp) #push t8
+
+#RIGHT, tens place
+add $a0, $t8, $zero #a0 <- t8, the digit
+li $a1, 0 #a1 <- 0, the side
+jal Display #call display
+ 
+#pop a0, a1, t0, and t8
+lw $t8, 0($sp) #pop t8
+lw $t0, 4($sp) #pop t0
+lw $a1, 8($sp) #pop a1
+lw $a0, 12($sp) #pop a0
+addi $sp, $sp, 16 #restore stack space
+
+add $t9, $t9, 1 #t9 <- t9 + 1, increment the ones place
+addi $t0, $t0, 1 #t0 <- t0 + 1, increment a to check if it hasn't exceeded b 
+j Loop #loop
+
+Display:
+li $t7, 0 #t7 <- 0
+beq $a1, $zero, LeftLED #if a1 is 0 go to store the left address
+bne $a1, $zero, RightLED #if a1 is 1 go to store the right address
+
+LeftLED:
+li $s2, 0xFFFF0011 #s2 <- address of left side
+beq $a0, $zero, Return #the left side should never display 0, so exit display since it means the number is less than 10
+j Digit #if the tens place is greater than 0 (and the number is greater or equal to 10) then check for the correct digit
+RightLED:
+li $s2, 0xFFFF0010 #s2 <- address of right side
+beq $a0, $zero, zero #if the ones place digit is 0 then go ahead and display it
+
+#check digits from 1 to 9
+Digit:
+addi $t7, $t7, 1 #t7 <- 1
+beq $a0, $t7, one #if the digit is 1 then go ahead and display it
+add $t7, $t7, 1 #t7 <- 2
+beq $a0, $t7, two #if the digit is 2 then go ahead and display it
+add $t7, $t7, 1 #t7 <- 3
+beq $a0, $t7, three #if the digit is 3 then go ahead and display it
+add $t7, $t7, 1 #t7 <- 4
+beq $a0, $t7, four #if the digit is 4 then go ahead and display it
+add $t7, $t7, 1 #t7 <- 5
+beq $a0, $t7, five #if the digit is 5 then go ahead and display it
+add $t7, $t7, 1 #t7 <- 6
+beq $a0, $t7, six #if the digit is 6 then go ahead and display it
+add $t7, $t7, 1 #t7 <- 7
+beq $a0, $t7, seven #if the digit is 7 then go ahead and display it
+add $t7, $t7, 1 #t7 <- 8
+beq $a0, $t7, eight #if the digit is 8 then go ahead and display it
+add $t7, $t7, 1 #t7 <- 9
+beq $a0, $t7, nine #if the digit is 9 then go ahead and display it
+
+zero:
+li $s1, 0x3F #s1 <- 0
+sb $s1, 0($s2) #store 0 into the correct LED
+j Return
+
+one:
+li $s1, 0x6 #s1 <- 1
+sb $s1, 0($s2) #store 1 into the correct LED
+j Return
+
+two:
+li $s1, 0x5B #s1 <- 2
+sb $s1, 0($s2) #store 2 into the correct LED
+j Return
+
+three:
+li $s1, 0x4F #s1 <- 3
+sb $s1, 0($s2) #store 3 into the correct LED
+j Return
+
+four:
+li $s1, 0x66 #s1 <- 4
+sb $s1, 0($s2) #store 4 into the correct LED
+j Return
+
+five:
+li $s1, 0x6D #s1 <- 5
+sb $s1, 0($s2) #store 5 into the correct LED
+j Return
+
+six:
+li $s1, 0x7D #s1 <- 6
+sb $s1, 0($s2) #store 6 into the correct LED
+j Return
+
+seven:
+li $s1, 0x07 #s1 <- 7
+sb $s1, 0($s2) #store 7 into the correct LED
+jr $ra
+
+eight:
+li $s1, 0x7F #s1 <- 8
+sb $s1, 0($s2) #store 8 into the correct LED
+j Return
+
+nine:
+li $s1, 0x67 #s1 <- 9
+sb $s1, 0($s2) #store 9 into the correct LED
+j Return
+
+Return: #go back to main
+jr $ra
+
+OUT: #exit
+li $v0, 10
+syscall
